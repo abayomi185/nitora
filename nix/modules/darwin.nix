@@ -25,16 +25,16 @@ in
       description = "Path to the Unix socket Nitora listens on (NITORA_SOCKET).";
     };
 
-    autoEnable = lib.mkOption {
+    autoActivate = lib.mkOption {
       type = lib.types.bool;
       default = false;
-      description = "Automatically enable XDR brightness when the service starts.";
+      description = "Automatically activate XDR brightness when the service starts.";
     };
 
     brightness = lib.mkOption {
       type = lib.types.ints.between 0 100;
       default = 100;
-      description = "Initial brightness level (0-100) applied when auto-enabled.";
+      description = "Initial brightness level (0-100) applied when auto-activated.";
     };
   };
 
@@ -49,8 +49,8 @@ in
             "${cfg.package}/bin/nitora"
             "serve"
           ]
-          ++ lib.optionals cfg.autoEnable [
-            "--auto-enable"
+          ++ lib.optionals cfg.autoActivate [
+            "--auto-activate"
           ]
           ++ lib.optionals (cfg.brightness != 100) [
             "--brightness"

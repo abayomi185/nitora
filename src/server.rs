@@ -179,7 +179,7 @@ impl BackendState {
     }
 }
 
-pub fn run(auto_enable: bool, brightness: u8) -> Result<()> {
+pub fn run(auto_activate: bool, brightness: u8) -> Result<()> {
     let mtm = MainThreadMarker::new().ok_or_else(|| anyhow!("must run on the main thread"))?;
     let app = NSApplication::sharedApplication(mtm);
     if !app.setActivationPolicy(NSApplicationActivationPolicy::Accessory) {
@@ -191,7 +191,7 @@ pub fn run(auto_enable: bool, brightness: u8) -> Result<()> {
     let _ipc_thread = spawn_ipc_thread(command_tx)?;
     let mut state = ServiceState::new(brightness)?;
 
-    if auto_enable {
+    if auto_activate {
         if let Err(e) = state.backend.apply(true, state.brightness) {
             eprintln!("Auto-enable failed: {e:#}");
         } else {

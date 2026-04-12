@@ -16,9 +16,9 @@ pub struct Cli {
 #[derive(Debug, Clone, Subcommand)]
 pub enum Command {
     Serve {
-        /// Automatically enable XDR brightness when the service starts.
+        /// Automatically activate XDR brightness when the service starts.
         #[arg(long)]
-        auto_enable: bool,
+        auto_activate: bool,
 
         /// Initial brightness level (0-100).
         #[arg(long, value_parser = clap::value_parser!(u8).range(0..=100), default_value_t = 100)]
