@@ -19,7 +19,7 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Command::Serve => server::run(),
+        Command::Serve { auto_enable, brightness } => server::run(auto_enable, brightness),
         Command::Enable => print_response(ipc::send_request(&Request::Enable)?),
         Command::Disable => print_response(ipc::send_request(&Request::Disable)?),
         Command::Toggle => print_response(ipc::send_request(&Request::Toggle)?),

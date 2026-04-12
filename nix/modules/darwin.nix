@@ -24,6 +24,18 @@ in
       default = "/tmp/nitora.sock";
       description = "Path to the Unix socket Nitora listens on (NITORA_SOCKET).";
     };
+
+    autoEnable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Automatically enable XDR brightness when the service starts.";
+    };
+
+    brightness = lib.mkOption {
+      type = lib.types.ints.between 0 100;
+      default = 100;
+      description = "Initial brightness level (0-100) applied when auto-enabled.";
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -32,10 +44,18 @@ in
     launchd.user.agents.nitora = {
       serviceConfig = {
         Label = "dev.nitora.daemon";
-        ProgramArguments = [
-          "${cfg.package}/bin/nitora"
-          "serve"
-        ];
+        ProgramArguments =
+          [
+            "${cfg.package}/bin/nitora"
+            "serve"
+          ]
+          ++ lib.optionals cfg.autoEnable [
+            "--auto-enable"
+          ]
+          ++ lib.optionals (cfg.brightness != 100) [
+            "--brightness"
+            (toString cfg.brightness)
+          ];
         EnvironmentVariables = {
           NITORA_SOCKET = cfg.socketPath;
         };

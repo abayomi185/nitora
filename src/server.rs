@@ -35,10 +35,10 @@ struct BackendState {
 }
 
 impl ServiceState {
-    fn new() -> Result<Self> {
+    fn new(brightness: u8) -> Result<Self> {
         Ok(Self {
             enabled: false,
-            brightness: 100,
+            brightness,
             backend: BackendState::new()?,
         })
     }
@@ -179,7 +179,7 @@ impl BackendState {
     }
 }
 
-pub fn run() -> Result<()> {
+pub fn run(auto_enable: bool, brightness: u8) -> Result<()> {
     let mtm = MainThreadMarker::new().ok_or_else(|| anyhow!("must run on the main thread"))?;
     let app = NSApplication::sharedApplication(mtm);
     if !app.setActivationPolicy(NSApplicationActivationPolicy::Accessory) {
@@ -189,7 +189,15 @@ pub fn run() -> Result<()> {
 
     let (command_tx, command_rx) = mpsc::channel::<CommandEnvelope>();
     let _ipc_thread = spawn_ipc_thread(command_tx)?;
-    let mut state = ServiceState::new()?;
+    let mut state = ServiceState::new(brightness)?;
+
+    if auto_enable {
+        if let Err(e) = state.backend.apply(true, state.brightness) {
+            eprintln!("Auto-enable failed: {e:#}");
+        } else {
+            state.enabled = true;
+        }
+    }
 
     loop {
         drain_commands(&command_rx, &mut state);
