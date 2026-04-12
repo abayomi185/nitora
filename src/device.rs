@@ -1,39 +1,7 @@
 use anyhow::{bail, Result};
 
-pub const SUPPORTED_DEVICES: &[&str] = &[
-    "MacBookPro18,1",
-    "MacBookPro18,2",
-    "MacBookPro18,3",
-    "MacBookPro18,4",
-    "Mac14,6",
-    "Mac14,10",
-    "Mac14,5",
-    "Mac14,9",
-    "Mac15,7",
-    "Mac15,9",
-    "Mac15,11",
-    "Mac15,6",
-    "Mac15,8",
-    "Mac15,10",
-    "Mac15,3",
-    "Mac16,1",
-    "Mac16,6",
-    "Mac16,8",
-    "Mac16,7",
-    "Mac16,5",
-    "Mac17,2",
-    "Mac17,6",
-    "Mac17,8",
-    "Mac17,7",
-    "Mac17,9",
-];
-
-pub const SDR_600_NITS_DEVICES: &[&str] = &[
-    "Mac15,3", "Mac15,6", "Mac15,7", "Mac15,8", "Mac15,9", "Mac15,10", "Mac15,11", "Mac16,1",
-    "Mac16,6", "Mac16,8", "Mac16,7", "Mac16,5", "Mac17,2", "Mac17,6", "Mac17,8", "Mac17,7",
-    "Mac17,9",
-];
-
+/// Retrieves the Mac model identifier (e.g. "Mac16,1") via IOKit.
+/// Used only for diagnostic/status output, not for capability gating.
 pub fn get_model_identifier() -> Result<String> {
     use std::ffi::CString;
 
@@ -83,16 +51,4 @@ pub fn get_model_identifier() -> Result<String> {
     }
 
     Ok(model)
-}
-
-pub fn is_device_supported(model: &str) -> bool {
-    SUPPORTED_DEVICES.contains(&model)
-}
-
-pub fn get_device_max_brightness(model: &str) -> f32 {
-    if SDR_600_NITS_DEVICES.contains(&model) {
-        1.535
-    } else {
-        1.59
-    }
 }

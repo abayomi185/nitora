@@ -18,12 +18,36 @@ use objc2_metal::{
 };
 use objc2_quartz_core::{CAMetalDrawable, CAMetalLayer};
 
+/// Fraction of available EDR headroom used for the maximum gamma boost.
+/// A value of 0.75 means at brightness=100% we use 75% of the display's
+/// extra dynamic range, leaving margin to avoid clipping artifacts.
+const MAX_HEADROOM_FRACTION: f64 = 0.75;
+
 #[derive(Debug, Clone)]
 pub struct TargetScreen {
     pub display_id: u32,
     pub name: String,
     pub frame: NSRect,
-    pub edr_value: f64,
+    /// The display's full EDR headroom from
+    /// `maximumPotentialExtendedDynamicRangeColorComponentValue`.
+    /// Values > 1.0 indicate extended dynamic range capability.
+    pub edr_headroom: f64,
+}
+
+impl TargetScreen {
+    /// Maximum safe gamma multiplier for this display, derived from its
+    /// hardware EDR headroom. Scales linearly within the headroom using
+    /// `MAX_HEADROOM_FRACTION` as a conservative ceiling.
+    pub fn max_gamma_factor(&self) -> f64 {
+        (1.0 + (self.edr_headroom - 1.0) * MAX_HEADROOM_FRACTION).max(1.0)
+    }
+
+    /// Compute the gamma table multiplier for a brightness percentage (0–100).
+    /// At 0% the factor is 1.0 (no boost); at 100% it equals `max_gamma_factor()`.
+    pub fn gamma_factor_for_brightness(&self, brightness: u8) -> f32 {
+        let max = self.max_gamma_factor();
+        (1.0 + (max - 1.0) * f64::from(brightness) / 100.0) as f32
+    }
 }
 
 struct OverlayWindow {
@@ -74,11 +98,9 @@ impl OverlayController {
     fn create_window(&self, screen: &TargetScreen) -> Result<OverlayWindow> {
         let mtm =
             MainThreadMarker::new().ok_or_else(|| anyhow!("must run overlay on main thread"))?;
+        // Place the 1×1 overlay at the screen’s coordinate origin.
         let frame = NSRect::new(
-            NSPoint::new(
-                screen.frame.origin.x,
-                screen.frame.origin.y + screen.frame.size.height - 1.0,
-            ),
+            NSPoint::new(screen.frame.origin.x, screen.frame.origin.y),
             NSSize::new(1.0, 1.0),
         );
 
@@ -127,7 +149,7 @@ impl OverlayController {
         window.setContentView(Some(&view));
         window.orderFrontRegardless();
 
-        render_layer(&self.command_queue, &layer, screen.edr_value)
+        render_layer(&self.command_queue, &layer, screen.edr_headroom)
             .with_context(|| format!("failed rendering EDR overlay for {}", screen.name))?;
 
         Ok(OverlayWindow {
@@ -140,7 +162,7 @@ impl OverlayController {
 fn render_layer(
     command_queue: &ProtocolObject<dyn MTLCommandQueue>,
     layer: &CAMetalLayer,
-    edr_value: f64,
+    edr_headroom: f64,
 ) -> Result<()> {
     autoreleasepool(|_| {
         let drawable = layer
@@ -155,9 +177,9 @@ fn render_layer(
         attachment.setLoadAction(MTLLoadAction::Clear);
         attachment.setStoreAction(MTLStoreAction::Store);
         attachment.setClearColor(MTLClearColor {
-            red: edr_value,
-            green: edr_value,
-            blue: edr_value,
+            red: edr_headroom,
+            green: edr_headroom,
+            blue: edr_headroom,
             alpha: 1.0,
         });
 
@@ -179,7 +201,10 @@ fn render_layer(
     })
 }
 
-pub fn collect_target_screens(supports_builtin_xdr: bool) -> Vec<TargetScreen> {
+/// Enumerate screens that support extended dynamic range.
+/// Any display (built-in or external) with EDR headroom > 1.0 is eligible.
+/// This avoids maintaining a hardcoded list of device model identifiers.
+pub fn collect_target_screens() -> Vec<TargetScreen> {
     let Some(mtm) = MainThreadMarker::new() else {
         return Vec::new();
     };
@@ -189,19 +214,15 @@ pub fn collect_target_screens(supports_builtin_xdr: bool) -> Vec<TargetScreen> {
 
     for screen in screens.iter() {
         let display_id = screen.CGDirectDisplayID();
-        let is_built_in = core_graphics2::display::CGDisplay::new(display_id).is_built_in();
         let potential_edr = screen.maximumPotentialExtendedDynamicRangeColorComponentValue();
-        let built_in_supported = is_built_in && supports_builtin_xdr;
-        let external_supported = !is_built_in && potential_edr > 1.0;
 
-        if built_in_supported || external_supported {
-            let edr_value = potential_edr.max(1.1);
+        if potential_edr > 1.0 {
             let name: String = screen.localizedName().to_string();
             targets.push(TargetScreen {
                 display_id,
                 name,
                 frame: screen.frame(),
-                edr_value,
+                edr_headroom: potential_edr,
             });
         }
     }

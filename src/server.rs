@@ -29,9 +29,8 @@ struct ServiceState {
 struct BackendState {
     overlay: crate::overlay::OverlayController,
     gamma_tables: HashMap<u32, GammaTable>,
+    /// Retained for status/diagnostic output only.
     model_identifier: Option<String>,
-    supports_builtin_xdr: bool,
-    max_brightness_factor: f32,
 }
 
 impl ServiceState {
@@ -110,8 +109,7 @@ impl ServiceState {
                     .unwrap_or(0);
                 response(
                     format!(
-                        "Service ready. model={model}, active_displays={active_count}, eligible_displays={eligible_count}, builtin_supported={}",
-                        self.backend.supports_builtin_xdr
+                        "Service ready. model={model}, active_displays={active_count}, eligible_displays={eligible_count}"
                     ),
                     self,
                     true,
@@ -124,21 +122,11 @@ impl ServiceState {
 impl BackendState {
     fn new() -> Result<Self> {
         let model_identifier = crate::device::get_model_identifier().ok();
-        let supports_builtin_xdr = model_identifier
-            .as_deref()
-            .map(crate::device::is_device_supported)
-            .unwrap_or(false);
-        let max_brightness_factor = model_identifier
-            .as_deref()
-            .map(crate::device::get_device_max_brightness)
-            .unwrap_or(1.59);
 
         Ok(Self {
             overlay: crate::overlay::OverlayController::new()?,
             gamma_tables: HashMap::new(),
             model_identifier,
-            supports_builtin_xdr,
-            max_brightness_factor,
         })
     }
 
@@ -150,7 +138,7 @@ impl BackendState {
             return Ok(0);
         }
 
-        let targets = crate::overlay::collect_target_screens(self.supports_builtin_xdr);
+        let targets = crate::overlay::collect_target_screens();
         if targets.is_empty() {
             self.overlay.disable()?;
             crate::gamma::restore_color_sync()?;
@@ -162,8 +150,9 @@ impl BackendState {
         crate::gamma::restore_color_sync()?;
         self.gamma_tables.clear();
 
-        let factor = 1.0 + (self.max_brightness_factor - 1.0) * f32::from(brightness) / 100.0;
+        // Each display gets its own gamma factor derived from its EDR headroom.
         for target in &targets {
+            let factor = target.gamma_factor_for_brightness(brightness);
             let table = crate::gamma::capture_gamma_table(target.display_id)
                 .with_context(|| format!("failed capturing gamma table for {}", target.name))?;
             crate::gamma::apply_gamma_factor(target.display_id, &table, factor)
@@ -175,7 +164,7 @@ impl BackendState {
     }
 
     fn target_count(&self) -> usize {
-        crate::overlay::collect_target_screens(self.supports_builtin_xdr).len()
+        crate::overlay::collect_target_screens().len()
     }
 }
 
