@@ -2,23 +2,23 @@
 
 This repo includes two workflows that work together:
 
-- `.github/workflows/release.yml` — builds pre-compiled binaries for both `aarch64-apple-darwin` and `x86_64-apple-darwin`, packages them as tarballs, and uploads them to a GitHub release.
+- `.github/workflows/release.yml` — builds a pre-compiled `aarch64-apple-darwin` binary, packages it as a tarball, and uploads it to a GitHub release.
 - `.github/workflows/publish-homebrew-tap.yml` — generates a Homebrew formula pointing at those pre-built binaries and pushes it to the tap repo.
 
 ### How it works
 
 On tag push (`v*`):
 
-1. `release.yml` cross-compiles for both architectures on a single `macos-latest` runner
-2. Packages each binary as `nitora-<tag>-<target>.tar.gz`
-3. Creates a GitHub release with both tarballs
+1. `release.yml` builds an arm64 release binary on `macos-latest`
+2. Packages the binary as `nitora-<tag>-aarch64-apple-darwin.tar.gz`
+3. Creates a GitHub release with the tarball
 
 On release published (or manual trigger):
 
-1. `publish-homebrew-tap.yml` downloads both tarballs from the release
-2. Computes SHA256 for each
+1. `publish-homebrew-tap.yml` downloads the tarball from the release
+2. Computes SHA256
 3. Reads package metadata (name, description, license) from `Cargo.toml`
-4. Generates a binary formula with `on_arm`/`on_intel` blocks
+4. Generates a binary formula
 5. Commits and pushes `Formula/nitora.rb` to the tap repo
 
 ### User installation
@@ -47,8 +47,7 @@ brew install nitora
 ### Tarball naming convention
 
 ```
-nitora-v0.4.1-aarch64-apple-darwin.tar.gz
-nitora-v0.4.1-x86_64-apple-darwin.tar.gz
+nitora-v0.4.2-aarch64-apple-darwin.tar.gz
 ```
 
 ### Manual prerequisites
@@ -61,4 +60,4 @@ Before the first release:
 
 ### Trigger manually
 
-You can run the formula publish workflow manually with a tag like `v0.4.1`.
+You can run the formula publish workflow manually with a tag like `v0.4.2`.

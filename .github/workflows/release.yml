@@ -16,25 +16,20 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-apple-darwin,x86_64-apple-darwin
 
-      - name: Build aarch64
+      - name: Cache Cargo registry and build artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build release binary
         run: cargo build --release --target aarch64-apple-darwin
 
-      - name: Build x86_64
-        run: cargo build --release --target x86_64-apple-darwin
-
-      - name: Package tarballs
+      - name: Package tarball
         run: |
           set -euo pipefail
           tag="${GITHUB_REF_NAME}"
-
-          for target in aarch64-apple-darwin x86_64-apple-darwin; do
-            tarball="nitora-${tag}-${target}.tar.gz"
-            tar -czf "${tarball}" -C "target/${target}/release" nitora
-            echo "Packaged ${tarball}"
-          done
+          tarball="nitora-${tag}-aarch64-apple-darwin.tar.gz"
+          tar -czf "${tarball}" -C target/aarch64-apple-darwin/release nitora
+          echo "Packaged ${tarball}"
 
       - name: Create GitHub Release
         env:
@@ -45,6 +40,5 @@ jobs:
 
           gh release create "${tag}" \
             "nitora-${tag}-aarch64-apple-darwin.tar.gz" \
-            "nitora-${tag}-x86_64-apple-darwin.tar.gz" \
             --title "${tag}" \
             --generate-notes

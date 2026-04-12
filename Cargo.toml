@@ -8,7 +8,7 @@ keywords = ["macos", "cli", "brightness", "xdr", "edr"]
 categories = ["command-line-utilities", "os::macos-apis"]
 
 [package.metadata]
-supported-platforms = ["x86_64-apple-darwin", "aarch64-apple-darwin"]
+supported-platforms = ["aarch64-apple-darwin"]
 
 [dependencies]
 anyhow = "1.0"
