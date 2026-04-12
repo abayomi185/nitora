@@ -152,12 +152,13 @@ jobs:
         run: |
           set -euo pipefail
 
-          if git diff --quiet -- "Formula/${{ steps.meta.outputs.formula_name }}.rb"; then
+          git add "Formula/${{ steps.meta.outputs.formula_name }}.rb"
+
+          if git diff --cached --quiet -- "Formula/${{ steps.meta.outputs.formula_name }}.rb"; then
             echo "Formula already up to date"
             exit 0
           fi
 
-          git add "Formula/${{ steps.meta.outputs.formula_name }}.rb"
           git \
             -c user.name='github-actions[bot]' \
             -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
