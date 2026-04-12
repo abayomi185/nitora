@@ -88,6 +88,9 @@ nix develop
 {
   imports = [ inputs.nitora.darwinModules.default ];
 
-  programs.nitora.enable = true;
+  programs.nitora = {
+    enable = true;
+    autoActivate = true;
+  };
 }
 ```
