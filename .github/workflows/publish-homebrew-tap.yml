@@ -1,9 +1,10 @@
 name: Publish Homebrew Formula
 
 on:
-  release:
+  workflow_run:
+    workflows: ["Release"]
     types:
-      - published
+      - completed
   workflow_dispatch:
     inputs:
       tag:
@@ -14,12 +15,15 @@ on:
 jobs:
   publish-homebrew-formula:
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     permissions:
       contents: read
 
     steps:
       - name: Checkout source repo
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch || inputs.tag }}
 
       - name: Resolve release metadata
         id: meta
@@ -27,9 +31,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
-            tag="${{ github.event.release.tag_name }}"
-          else
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_run" ]]; then
+            tag="${{ github.event.workflow_run.head_branch }}"
+          elif [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
             tag="${{ inputs.tag }}"
           fi
 
