@@ -18,10 +18,11 @@ use objc2_metal::{
 };
 use objc2_quartz_core::{CAMetalDrawable, CAMetalLayer};
 
-/// Fraction of available EDR headroom used for the maximum gamma boost.
-/// A value of 0.75 means at brightness=100% we use 75% of the display's
-/// extra dynamic range, leaving margin to avoid clipping artifacts.
-const MAX_HEADROOM_FRACTION: f64 = 0.75;
+/// Absolute ceiling on the gamma table multiplier regardless of display
+/// headroom. A factor of 1.6 means at most a 60% brightness boost above SDR.
+/// Higher headroom displays could theoretically go further, but past ~1.6x
+/// content washes out and becomes hard to read.
+const MAX_GAMMA_CAP: f64 = 1.6;
 
 #[derive(Debug, Clone)]
 pub struct TargetScreen {
@@ -35,11 +36,11 @@ pub struct TargetScreen {
 }
 
 impl TargetScreen {
-    /// Maximum safe gamma multiplier for this display, derived from its
-    /// hardware EDR headroom. Scales linearly within the headroom using
-    /// `MAX_HEADROOM_FRACTION` as a conservative ceiling.
+    /// Maximum safe gamma multiplier for this display. Uses the display's
+    /// own EDR headroom when it's below the cap, otherwise clamps to
+    /// `MAX_GAMMA_CAP` to avoid washing out content.
     pub fn max_gamma_factor(&self) -> f64 {
-        (1.0 + (self.edr_headroom - 1.0) * MAX_HEADROOM_FRACTION).max(1.0)
+        self.edr_headroom.min(MAX_GAMMA_CAP).max(1.0)
     }
 
     /// Compute the gamma table multiplier for a brightness percentage (0–100).
