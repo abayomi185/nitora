@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>dev.nitora.daemon</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/absolute/path/to/nitora</string>
+    <string>serve</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>NITORA_SOCKET</key>
+    <string>/tmp/nitora.sock</string>
+  </dict>
+  <key>KeepAlive</key>
+  <true/>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>ProcessType</key>
+  <string>Interactive</string>
+  <key>StandardOutPath</key>
+  <string>/tmp/nitora.stdout.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/nitora.stderr.log</string>
+</dict>
+</plist>

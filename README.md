@@ -40,3 +40,50 @@ cargo run -- enable
 cargo run -- set 60
 cargo run -- disable
 ```
+
+## Nix
+
+This repo includes:
+
+- a flake package
+- a dev shell
+- a nix-darwin module
+- a Home Manager module
+
+Build with Nix:
+
+```bash
+nix build .#nitora
+```
+
+Run the CLI:
+
+```bash
+nix run .#nitora -- --help
+```
+
+Enter the dev shell:
+
+```bash
+nix develop
+```
+
+### nix-darwin
+
+```nix
+{
+  imports = [ inputs.nitora.darwinModules.default ];
+
+  programs.nitora.enable = true;
+}
+```
+
+### Home Manager
+
+```nix
+{
+  imports = [ inputs.nitora.homeManagerModules.default ];
+
+  programs.nitora.enable = true;
+}
+```
