@@ -48,7 +48,6 @@ This repo includes:
 - a flake package
 - a dev shell
 - a nix-darwin module
-- a Home Manager module
 
 Build with Nix:
 
@@ -73,16 +72,6 @@ nix develop
 ```nix
 {
   imports = [ inputs.nitora.darwinModules.default ];
-
-  programs.nitora.enable = true;
-}
-```
-
-### Home Manager
-
-```nix
-{
-  imports = [ inputs.nitora.homeManagerModules.default ];
 
   programs.nitora.enable = true;
 }

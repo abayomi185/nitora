@@ -73,10 +73,5 @@
         default = import ./nix/modules/darwin.nix;
         nitora = import ./nix/modules/darwin.nix;
       };
-
-      homeManagerModules = {
-        default = import ./nix/modules/home-manager.nix;
-        nitora = import ./nix/modules/home-manager.nix;
-      };
     };
 }
