@@ -7,6 +7,21 @@ It uses:
 - a tiny AppKit + Metal overlay to trigger EDR/XDR mode
 - CoreGraphics gamma table control to adjust brightness
 
+## Installation
+
+### Homebrew
+
+```bash
+brew tap abayomi185/tap
+brew install nitora
+```
+
+### From source
+
+```bash
+cargo install --git https://github.com/abayomi185/nitora.git
+```
+
 ## Commands
 
 ```bash

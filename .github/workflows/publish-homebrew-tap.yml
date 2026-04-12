@@ -40,30 +40,45 @@ jobs:
 
           tap_repo="${{ vars.HOMEBREW_TAP_REPO }}"
           if [[ -z "${tap_repo}" ]]; then
-            tap_repo="${GITHUB_REPOSITORY_OWNER}/homebrew-nitora"
+            tap_repo="${GITHUB_REPOSITORY_OWNER}/homebrew-tap"
           fi
 
-          archive_url="https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${tag}.tar.gz"
-          curl -fsSL "${archive_url}" -o source.tar.gz
-          sha256="$(sha256sum source.tar.gz | awk '{print $1}')"
+          base_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${tag}"
 
-          python <<'PY' >> "$GITHUB_OUTPUT"
-from pathlib import Path
-import tomllib
+          # Download both architecture tarballs and compute SHA256
+          for target in aarch64-apple-darwin x86_64-apple-darwin; do
+            tarball="nitora-${tag}-${target}.tar.gz"
+            url="${base_url}/${tarball}"
+            echo "Downloading ${url}"
+            curl -fsSL "${url}" -o "${tarball}"
+          done
 
-package = tomllib.loads(Path("Cargo.toml").read_text())["package"]
-name = package["name"]
-formula_class = "".join(part.capitalize() for part in name.replace("_", "-").split("-"))
-print(f"formula_name={name}")
-print(f"formula_class={formula_class}")
-print(f"description={package['description']}")
-print(f"license={package['license']}")
-PY
+          sha256_arm="$(sha256sum "nitora-${tag}-aarch64-apple-darwin.tar.gz" | awk '{print $1}')"
+          sha256_intel="$(sha256sum "nitora-${tag}-x86_64-apple-darwin.tar.gz" | awk '{print $1}')"
+
+          # Read package metadata from Cargo.toml
+          python3 <<'PY' >> "$GITHUB_OUTPUT"
+          from pathlib import Path
+          import tomllib
+
+          package = tomllib.loads(Path("Cargo.toml").read_text())["package"]
+          name = package["name"]
+          formula_class = "".join(part.capitalize() for part in name.replace("_", "-").split("-"))
+          print(f"formula_name={name}")
+          print(f"formula_class={formula_class}")
+          print(f"description={package['description']}")
+          print(f"license={package['license']}")
+          PY
+
+          # Strip leading 'v' for the version field
+          version="${tag#v}"
 
           {
             echo "tag=${tag}"
-            echo "archive_url=${archive_url}"
-            echo "sha256=${sha256}"
+            echo "version=${version}"
+            echo "base_url=${base_url}"
+            echo "sha256_arm=${sha256_arm}"
+            echo "sha256_intel=${sha256_intel}"
             echo "tap_repo=${tap_repo}"
           } >> "$GITHUB_OUTPUT"
 
@@ -96,26 +111,34 @@ PY
 
           mkdir -p tap/Formula
 
-          cat > "tap/Formula/${{ steps.meta.outputs.formula_name }}.rb" <<EOF
+          cat > "tap/Formula/${{ steps.meta.outputs.formula_name }}.rb" <<FORMULA
           class ${{ steps.meta.outputs.formula_class }} < Formula
             desc "${{ steps.meta.outputs.description }}"
             homepage "https://github.com/${GITHUB_REPOSITORY}"
-            url "${{ steps.meta.outputs.archive_url }}"
-            sha256 "${{ steps.meta.outputs.sha256 }}"
+            version "${{ steps.meta.outputs.version }}"
             license "${{ steps.meta.outputs.license }}"
 
+            on_arm do
+              url "${{ steps.meta.outputs.base_url }}/nitora-${{ steps.meta.outputs.tag }}-aarch64-apple-darwin.tar.gz"
+              sha256 "${{ steps.meta.outputs.sha256_arm }}"
+            end
+
+            on_intel do
+              url "${{ steps.meta.outputs.base_url }}/nitora-${{ steps.meta.outputs.tag }}-x86_64-apple-darwin.tar.gz"
+              sha256 "${{ steps.meta.outputs.sha256_intel }}"
+            end
+
             depends_on :macos
-            depends_on "rust" => :build
 
             def install
-              system "cargo", "install", *std_cargo_args(path: ".")
+              bin.install "nitora"
             end
 
             test do
               assert_match "${{ steps.meta.outputs.formula_name }}", shell_output("\#{bin}/${{ steps.meta.outputs.formula_name }} --help")
             end
           end
-          EOF
+          FORMULA
 
       - name: Commit and push formula update
         working-directory: tap
