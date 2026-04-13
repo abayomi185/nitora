@@ -7,6 +7,9 @@ It uses:
 - a tiny AppKit + Metal overlay to trigger EDR/XDR mode
 - CoreGraphics gamma table control to adjust brightness
 
+> [!NOTE]
+> This project was built with the help of AI.
+
 ## Installation
 
 ### Homebrew
@@ -94,3 +97,8 @@ nix develop
   };
 }
 ```
+
+## Inspiration / Similar projects
+
+- [BrightIntosh](https://github.com/niklasr22/BrightIntosh) — a macOS utility for unlocking higher XDR display brightness.
+- [BrightXDR](https://github.com/starkdmi/BrightXDR) — an open-source proof-of-concept for XDR/HDR extra brightness on macOS.

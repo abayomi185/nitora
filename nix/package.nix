@@ -31,7 +31,7 @@ rustPlatform.buildRustPackage {
 
   meta = {
     description = "macOS XDR/EDR brightness control CLI";
-    license = lib.licenses.mit;
+    license = lib.licenses.gpl3Plus;
     mainProgram = "nitora";
     platforms = lib.platforms.darwin;
   };

@@ -3,7 +3,7 @@ name = "nitora"
 version = "0.4.3"
 edition = "2024"
 description = "macOS XDR/EDR brightness control CLI"
-license = "MIT"
+license = "GPL-3.0-or-later"
 keywords = ["macos", "cli", "brightness", "xdr", "edr"]
 categories = ["command-line-utilities", "os::macos-apis"]
 
