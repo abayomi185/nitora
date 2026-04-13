@@ -31,14 +31,16 @@ jobs:
           tar -czf "${tarball}" -C target/aarch64-apple-darwin/release nitora
           echo "Packaged ${tarball}"
 
-      - name: Create GitHub Release
+      - name: Publish GitHub release asset
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           tag="${GITHUB_REF_NAME}"
+          tarball="nitora-${tag}-aarch64-apple-darwin.tar.gz"
 
-          gh release create "${tag}" \
-            "nitora-${tag}-aarch64-apple-darwin.tar.gz" \
-            --title "${tag}" \
-            --generate-notes
+          if gh release view "${tag}" >/dev/null 2>&1; then
+            gh release upload "${tag}" "${tarball}" --clobber
+          else
+            gh release create "${tag}" "${tarball}" --title "${tag}" --generate-notes
+          fi

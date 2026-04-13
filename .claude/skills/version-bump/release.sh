@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #
-# Automate version bump, commit, tag, and push for nitora releases.
+# Automate version bump, commit, tag, push, and GitHub release for nitora releases.
 #
 # Usage: .claude/skills/version-bump/release.sh <patch|minor|major>
 #
-# Prerequisites: clean worktree, on main branch, cargo available.
+# Prerequisites: clean worktree, on main branch, cargo + gh available and authenticated.
 # On failure after Cargo.toml edit, rolls back automatically.
 
 set -euo pipefail
@@ -45,6 +45,9 @@ esac
 
 branch="$(git rev-parse --abbrev-ref HEAD)"
 [[ "$branch" == "main" ]] || die "must be on main branch (currently on '$branch')"
+
+command -v gh >/dev/null 2>&1 || die "gh CLI is required (https://cli.github.com/)"
+gh auth status >/dev/null 2>&1 || die "gh CLI is not authenticated; run 'gh auth login'"
 
 # --- parse current version --------------------------------------------------
 
@@ -88,15 +91,19 @@ grep -q "^version = \"${new_version}\"" "$CARGO_TOML" \
 printf 'Running cargo check...\n'
 cargo check --quiet
 
-# --- commit, tag, push ------------------------------------------------------
+# No editable workspace changes remain after this point; stop rollback handler so
+# publish-time failures don't print misleading rollback messages.
+trap - ERR
+
+# --- commit, tag, push, release -----------------------------------------------
 
 git add "$CARGO_TOML" Cargo.lock
 git commit --quiet -m "chore: bump version to ${new_version}"
 git tag "$tag"
 git push origin main --follow-tags --quiet
 
-trap - ERR
-
+printf 'Creating GitHub release %s...\n' "$tag"
+gh release create "$tag" --title "$tag" --generate-notes --verify-tag
 # --- summary ----------------------------------------------------------------
 
 cat <<EOF
@@ -104,6 +111,7 @@ cat <<EOF
   Release prepared:
     ${current} → ${new_version}
     Tag ${tag} pushed to origin.
-    CI will build the release and update the Homebrew tap.
+    GitHub release ${tag} created.
+    CI will build binaries and publish release assets.
 
 EOF
